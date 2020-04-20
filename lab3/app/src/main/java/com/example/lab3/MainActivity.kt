@@ -1,10 +1,21 @@
 package com.example.lab3
 
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
+import com.example.lab3.Models.Order
+import com.example.lab3.R.id.orderText
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_order.*
+import kotlinx.android.synthetic.main.order.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -12,69 +23,105 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Get radio group selected status and text using button click event
-        button.setOnClickListener{
-            // Get the checked radio button id from radio group
-            var id: Int = radio_group.checkedRadioButtonId
-            var id2: Int = radio_group2.checkedRadioButtonId
-            val editText = findViewById<EditText>(R.id.editText)
+        loadQueryAll()
+    }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
 
-            if (id!=-1 && id2!=-1){ // If any radio button checked from radio group
-                // Get the instance of radio button using id
+        return super.onCreateOptionsMenu(menu)
+    }
 
-                val radio2: RadioButton = findViewById(id2)
-                val radio: RadioButton = findViewById(id)
-
-                Toast.makeText(applicationContext,"On button click :" +
-                        " ${radio.text}" + " and " + "${radio2.text}\n" + "text: " + "${editText.text}\n",
-                    Toast.LENGTH_SHORT).show()
-            }else
-                if(id!=-1 && id2==-1 ){
-                    val radio: RadioButton = findViewById(id)
-
-                    Toast.makeText(applicationContext,"On button click :" +
-                            " ${radio.text}" + " and " + "nothing selected in price\n" + "text: " + "${editText.text}\n",
-                        Toast.LENGTH_SHORT).show()
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        if (item != null) {
+            when (item.itemId) {
+                R.id.addOrder-> {
+                    var intent = Intent(this, OrderActivity::class.java)
+                    startActivity(intent)
                 }
-                else
-                    if(id==-1 && id2!=-1)
-                    {
-                        val radio2: RadioButton = findViewById(id2)
-
-                        Toast.makeText(applicationContext,"On button click :" +
-                                " ${radio2.text}" + " and " + "nothing selected in colours\n" + "text: " + "${editText.text}\n",
-                            Toast.LENGTH_SHORT).show()
-                    }
-                    else{
-                        // If no radio button checked in this radio group
-                        Toast.makeText(applicationContext,"On button click :" +
-                                " nothing selected\n" + "text: " + "${editText.text}\n" + "progress: ",
-                            Toast.LENGTH_SHORT).show()
-                    }
+            }
         }
 
-
-
-    }
-    // Get the selected radio button text using radio button on click listener
-    fun radio_button_click(view: View){
-        // Get the clicked radio button instance
-        val radio: RadioButton = findViewById(radio_group.checkedRadioButtonId)
-        Toast.makeText(applicationContext,"On click : ${radio.text}",
-            Toast.LENGTH_SHORT).show()
+        return super.onOptionsItemSelected(item)
     }
 
-    fun radio_button_click2(view: View){
-        // Get the clicked radio button instance
-        val radio: RadioButton = findViewById(radio_group2.checkedRadioButtonId)
-        Toast.makeText(applicationContext,"On click : ${radio.text}",
-            Toast.LENGTH_SHORT).show()
+    override fun onResume() {
+        super.onResume()
+        loadQueryAll()
     }
 
-    fun clear(view: View){
-        radio_group.clearCheck()
-        radio_group2.clearCheck()
-        editText.text.clear()
+    fun loadQueryAll() {
+
+        var dbManager = OrderDbManager(this)
+        val cursor = dbManager.queryAll()
+        var listOrders = ArrayList<Order>()
+
+        listOrders.clear()
+        if (cursor.moveToFirst()) {
+
+            do {
+                val id = cursor.getInt(cursor.getColumnIndex("Id"))
+                val text = cursor.getString(cursor.getColumnIndex("Text"))
+                val color = cursor.getString(cursor.getColumnIndex("Color"))
+                val price = cursor.getString(cursor.getColumnIndex("Price"))
+
+                listOrders.add(Order(id,text, color,price))
+
+            } while (cursor.moveToNext())
+        }
+
+        var ordersAdapter = OrdersAdapter(this, listOrders)
+        ordersList.adapter = ordersAdapter
     }
+
+    inner class OrdersAdapter : BaseAdapter {
+
+        private var ordersList = ArrayList<Order>()
+        private var context: Context? = null
+
+        constructor(context: Context, ordersList: ArrayList<Order>) : super() {
+            this.ordersList = ordersList
+            this.context = context
+        }
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View? {
+
+            var view: View
+
+            if (convertView == null) {
+                view = layoutInflater.inflate(R.layout.order,parent, false)
+            }
+            else
+                view=convertView
+
+            var mOrder = ordersList[position]
+
+            view?.findViewById<TextView>(R.id.orderId)?.text = mOrder.Id.toString()
+            view?.findViewById<TextView>(R.id.orderText)?.text = mOrder.Text
+            view?.findViewById<TextView>(R.id.orderColor)?.text = mOrder.Color
+            view?.findViewById<TextView>(R.id.orderPrice)?.text = mOrder.Price
+
+            view?.findViewById<ImageView>(R.id.ivDelete)?.setOnClickListener{
+                var dbManager = OrderDbManager(this.context!!)
+                val selectionArgs = arrayOf(mOrder.Id.toString())
+                dbManager.delete("Id=?", selectionArgs)
+                loadQueryAll()
+            }
+
+            return view
+        }
+
+        override fun getItem(position: Int): Any {
+            return ordersList[position]
+        }
+
+        override fun getItemId(position: Int): Long {
+            return position.toLong()
+        }
+
+        override fun getCount(): Int {
+            return ordersList.size
+        }
+    }
+
 }
