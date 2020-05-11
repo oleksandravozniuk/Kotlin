@@ -27,7 +27,7 @@ class OrderActivity : AppCompatActivity() {
             var editText = findViewById<EditText>(R.id.editText)
 
 
-            if (id!=-1 && id2!=-1 && editText.toString().isNotEmpty()){ // If all radio groups are chosen and the text field is not empty
+            if (id!=-1 && id2!=-1 && editText.text.isNotEmpty()){ // If all radio groups are chosen and the text field is not empty
 
 
                 val radio2: RadioButton = findViewById(id2)
